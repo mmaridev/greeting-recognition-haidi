@@ -12,6 +12,38 @@
 import cv2, numpy as np, math, time
 from GestureAPI import *
 
+# global var for Greeting
+global palm_pos_x, X_PALM_EXCURSION, EXAMINE_FRAME
+EXAMINE_FRAME = 50
+X_PALM_EXCURSION = 170
+palm_pos_x = []
+
+
+def is_greeting(new_pos=None):
+    global palm_pos_x, X_PALM_EXCURSION, EXAMINE_FRAME
+    if new_pos:
+        if type(new_pos) in (tuple, list):
+            palm_pos_x.append(new_pos[0])
+        else:
+            palm_pos_x.append(new_pos)
+    if len(palm_pos_x) > EXAMINE_FRAME:
+        palm_pos_x = palm_pos_x[-EXAMINE_FRAME:]
+    try:
+        excurions = max(palm_pos_x)-min(palm_pos_x)
+    except:
+        return False
+    state = excurions >= X_PALM_EXCURSION
+    if state:
+        try:
+            palm_pos_x = [sum(palm_pos_x)/len(palm_pos_x)]
+        except:
+            pass
+    return (state, excurions, max(palm_pos_x), min(palm_pos_x))
+
+
+# CSV export
+#pos_palmo = open("posizioni_palmo.csv", "w")
+
 # Variables & parameters
 hsv_thresh_lower=150
 gaussian_ksize=11
@@ -246,12 +278,22 @@ while True:
         if found:
             hand_convex_hull = cv2.convexHull(hand_contour)
             frame, hand_center, hand_radius, hand_size_score = mark_hand_center(frame_original,hand_contour)
-            print(hand_center)
+            #print(hand_center)
+            #pos_palmo.write("%s,%s\n" % hand_center)
+            x = is_greeting(hand_center)
+            if x[0]:
+                print ("Ciao", x)
+            else:
+                print("Non mi saluti?", x)
             if hand_size_score:
                 frame, finger, palm = mark_fingers(frame,hand_convex_hull,hand_center,hand_radius)
                 frame, gesture_found = find_gesture(frame,finger,palm)
         else:
             frame = frame_original
+            try:
+                is_greeting(sum(palm_pos_x)/len(palm_pos_x))
+            except:
+                pass
 
     # Display frame in a window
     cv2.imshow('HAIDI Greeting Recognitor v. 0.1', frame)
@@ -260,16 +302,6 @@ while True:
     # Quit by pressing 'q'
     if  interrupt & 0xFF == ord('q'):
         break
-    # Capture hand by pressing 'c'
-    elif interrupt & 0xFF == ord('c'):
-        if(bg_captured):
-            hand_histogram=hand_capture(frame_original,box_pos_x,box_pos_y)
-            capture_done = True
-            #hand_histogram.tolist()
-            np.save("mano_robotico.npy", hand_histogram)
-            #test = np.load("test.npy")
-            #test = np.fromfile("test", dtype=np.float32)
-            #print(hand_histogram, test, hand_histogram-test, hand_histogram == test)
     # Capture background by pressing 'b'
     #elif interrupt & 0xFF == ord('b'):
         #bg_model = cv2.BackgroundSubtractorMOG2(0,10)

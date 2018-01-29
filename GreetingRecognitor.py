@@ -11,6 +11,7 @@
 
 import cv2, numpy as np, math, time
 from GestureAPI import *
+from PeriodicFunction import list_is_a_periodic_fun
 
 # global var for Greeting
 global palm_pos_x, X_PALM_EXCURSION, EXAMINE_FRAME
@@ -29,16 +30,19 @@ def is_greeting(new_pos=None):
     if len(palm_pos_x) > EXAMINE_FRAME:
         palm_pos_x = palm_pos_x[-EXAMINE_FRAME:]
     try:
-        excurions = max(palm_pos_x)-min(palm_pos_x)
-    except:
-        return False
-    state = excurions >= X_PALM_EXCURSION
+        excursion = max(palm_pos_x)-min(palm_pos_x)
+        is_periodic = list_is_a_periodic_fun(palm_pos_x)
+        print(excursion, is_periodic)
+    except Exception as e:
+        print(e)
+        return [False]
+    state = (excursion >= X_PALM_EXCURSION) #and is_periodic
     if state:
         try:
             palm_pos_x = [sum(palm_pos_x)/len(palm_pos_x)]
         except:
             pass
-    return (state, excurions, max(palm_pos_x), min(palm_pos_x))
+    return (state, excursion, max(palm_pos_x), min(palm_pos_x))
 
 
 # CSV export
@@ -283,8 +287,8 @@ while True:
             x = is_greeting(hand_center)
             if x[0]:
                 print ("Ciao", x)
-            else:
-                print("Non mi saluti?", x)
+            #else:
+                #print("Non mi saluti?", x)
             if hand_size_score:
                 frame, finger, palm = mark_fingers(frame,hand_convex_hull,hand_center,hand_radius)
                 frame, gesture_found = find_gesture(frame,finger,palm)

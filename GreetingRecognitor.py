@@ -175,9 +175,10 @@ def remove_bg(frame):
 
 # Camera
 try:
-    camera = cv2.VideoCapture(1)
-except:
     camera = cv2.VideoCapture(0)
+except Exception as e:
+    print e
+    camera = cv2.VideoCapture(1)
 capture_done = 0
 bg_captured = 0
 GestureDictionary = DefineGestures()
@@ -201,10 +202,9 @@ while True:
             bg_model = cv2.BackgroundSubtractorMOG2(0,10)
             bg_captured = True
         else:
-            #capture_done=1
-            #hand_histogram=hand_capture(frame_original,box_pos_x,box_pos_y)
             capture_done = True
-            hand_histogram = np.fromfile("mano_robotico.npy", dtype=np.float32)
+            hand_histogram = np.load("mano_robotico.npy")
+            pass
 
         first_iteration = True
         finger_ct_history = [0,0]
@@ -246,6 +246,7 @@ while True:
         if found:
             hand_convex_hull = cv2.convexHull(hand_contour)
             frame, hand_center, hand_radius, hand_size_score = mark_hand_center(frame_original,hand_contour)
+            print(hand_center)
             if hand_size_score:
                 frame, finger, palm = mark_fingers(frame,hand_convex_hull,hand_center,hand_radius)
                 frame, gesture_found = find_gesture(frame,finger,palm)
@@ -253,18 +254,22 @@ while True:
             frame = frame_original
 
     # Display frame in a window
-    cv2.imshow('HAIDI Greeting Recognitor v. 0.1',frame)
+    cv2.imshow('HAIDI Greeting Recognitor v. 0.1', frame)
     interrupt = cv2.waitKey(10)
 
     # Quit by pressing 'q'
     if  interrupt & 0xFF == ord('q'):
         break
     # Capture hand by pressing 'c'
-    #elif interrupt & 0xFF == ord('c'):
-        #if(bg_captured):
-            #capture_done=1
-            #hand_histogram=hand_capture(frame_original,box_pos_x,box_pos_y)
-            #hand_histogram.tofile("test_mano")
+    elif interrupt & 0xFF == ord('c'):
+        if(bg_captured):
+            hand_histogram=hand_capture(frame_original,box_pos_x,box_pos_y)
+            capture_done = True
+            #hand_histogram.tolist()
+            np.save("mano_robotico.npy", hand_histogram)
+            #test = np.load("test.npy")
+            #test = np.fromfile("test", dtype=np.float32)
+            #print(hand_histogram, test, hand_histogram-test, hand_histogram == test)
     # Capture background by pressing 'b'
     #elif interrupt & 0xFF == ord('b'):
         #bg_model = cv2.BackgroundSubtractorMOG2(0,10)
